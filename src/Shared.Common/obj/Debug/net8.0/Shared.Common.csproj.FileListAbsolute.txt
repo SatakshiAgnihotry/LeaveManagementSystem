@@ -1,0 +1,12 @@
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\Shared.Common.csproj.AssemblyReference.cache
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\Shared.Common.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\Shared.Common.AssemblyInfoInputs.cache
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\Shared.Common.AssemblyInfo.cs
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\Shared.Common.csproj.CoreCompileInputs.cache
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\bin\Debug\net8.0\Shared.Common.deps.json
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\bin\Debug\net8.0\Shared.Common.dll
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\bin\Debug\net8.0\Shared.Common.pdb
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\Shared.Common.dll
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\refint\Shared.Common.dll
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\Shared.Common.pdb
+C:\Users\Harshit\Desktop\MiniLearning\NAGP\LMS\src\Shared.Common\obj\Debug\net8.0\ref\Shared.Common.dll

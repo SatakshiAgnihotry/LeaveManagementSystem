@@ -1,0 +1,352 @@
+version: '3.8'
+
+services:
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: lms-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
+
+  eureka-server:
+    image: steeltoeoss/eureka-server:latest
+    container_name: lms-eureka-server
+    environment:
+      SPRING_APPLICATION_NAME: eureka-server
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      SERVER_PORT: 8761
+    ports:
+      - "8761:8761"
+    networks:
+      - lms-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: lms-jaeger
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+      COLLECTOR_OTLP_ENABLED: "true"
+      COLLECTOR_OTLP_HTTP_HOST_PORT: ":4318"
+      LOG_LEVEL: "INFO"
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "6831:6831/udp"  # Jaeger UDP agent
+      - "5775:5775/udp"  # Jaeger UDP agent
+      - "5778:5778"  
+      - "14268:14268"  # Jaeger HTTP collector
+      - "14250:14250"  # Jaeger gRPC collector
+      - "9411:9411"  # Zipkin compatible endpoint
+      - "4317:4317"      # OTLP gRPC
+      - "4318:4318"      # OTLP HTTP ← Most important for you
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3      
+
+  # Databases
+  identity-db:
+    image: postgres:16
+    container_name: lms-identity-db
+    environment:
+      POSTGRES_DB: IdentityDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - identity-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+
+  employee-db:
+    image: postgres:16
+    container_name: lms-employee-db
+    environment:
+      POSTGRES_DB: EmployeeDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - employee-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+
+  leave-db:
+    image: postgres:16
+    container_name: lms-leave-db
+    environment:
+      POSTGRES_DB: LeaveDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - leave-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+
+  notification-db:
+    image: postgres:16
+    container_name: lms-notification-db
+    environment:
+      POSTGRES_DB: NotificationDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - notification-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+
+  # Services
+  identity-service:
+    build:
+      context: .
+      dockerfile: src/Services/IdentityService/Dockerfile
+    container_name: lms-identity-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Host=identity-db;Port=5432;Database=IdentityDb;Username=postgres;Password=postgres"
+      JwtSettings__SecretKey: "LeaveManagementSystem_SuperSecretKey_2026_JWT_Min256Bits!!"
+      JwtSettings__Issuer: "LeaveManagementSystem"
+      JwtSettings__Audience: "LeaveManagementSystemClients"
+      JwtSettings__ExpirationMinutes: "60"
+      Eureka__Client__ServiceUrl: "http://eureka-server:8761/eureka/"
+      Eureka__Client__ShouldRegisterWithEureka: "true"
+      Eureka__Client__ShouldFetchRegistry: "false"
+      Eureka__Instance__AppName: "IDENTITY-SERVICE"
+      Eureka__Instance__HostName: "identity-service"
+      Eureka__Instance__Port: "8080"
+      Eureka__Instance__HealthCheckUrlPath: "/health"
+      Jaeger__ServiceName: "IdentityService"
+      Jaeger__Host: "jaeger"
+      Jaeger__Port: "4317"
+      Jaeger__SamplingRate: "1.0"
+      # === OpenTelemetry Settings ===
+      OTEL_SERVICE_NAME: IdentityService
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+    ports:
+      - "5001:8080"
+    depends_on:
+      eureka-server:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      leave-db:
+        condition: service_started
+    networks:
+      - lms-network
+
+  employee-service:
+    build:
+      context: .
+      dockerfile: src/Services/EmployeeService/Dockerfile
+    container_name: lms-employee-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Host=employee-db;Port=5432;Database=EmployeeDb;Username=postgres;Password=postgres"
+      JwtSettings__SecretKey: "LeaveManagementSystem_SuperSecretKey_2026_JWT_Min256Bits!!"
+      JwtSettings__Issuer: "LeaveManagementSystem"
+      JwtSettings__Audience: "LeaveManagementSystemClients"
+      JwtSettings__ExpirationMinutes: "60"
+      ServiceApiKey: "LMS-Internal-Key-2026!"
+      Eureka__Client__ServiceUrl: "http://eureka-server:8761/eureka/"
+      Eureka__Client__ShouldRegisterWithEureka: "true"
+      Eureka__Client__ShouldFetchRegistry: "false"
+      Eureka__Instance__AppName: "EMPLOYEE-SERVICE"
+      Eureka__Instance__HostName: "employee-service"
+      Eureka__Instance__Port: "8080"
+      Eureka__Instance__HealthCheckUrlPath: "/health"
+      Jaeger__ServiceName: "EmployeeService"
+      Jaeger__Host: "jaeger"
+      Jaeger__Port: "4317"
+      Jaeger__SamplingRate: "1.0"
+      # === OpenTelemetry Settings ===
+      OTEL_SERVICE_NAME: EmployeeService
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+    ports:
+      - "5002:8080"
+    depends_on:
+      eureka-server:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      leave-db:
+        condition: service_started
+    networks:
+      - lms-network
+
+  leave-service:
+    build:
+      context: .
+      dockerfile: src/Services/LeaveService/Dockerfile
+    container_name: lms-leave-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Host=leave-db;Port=5432;Database=LeaveDb;Username=postgres;Password=postgres"
+      JwtSettings__SecretKey: "LeaveManagementSystem_SuperSecretKey_2026_JWT_Min256Bits!!"
+      JwtSettings__Issuer: "LeaveManagementSystem"
+      JwtSettings__Audience: "LeaveManagementSystemClients"
+      JwtSettings__ExpirationMinutes: "60"
+      ServiceApiKey: "LMS-Internal-Key-2026!"
+      Services__EmployeeServiceUrl: "http://employee-service:8080"
+      RabbitMQ__HostName: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__UserName: "guest"
+      RabbitMQ__Password: "guest"
+      Eureka__Client__ServiceUrl: "http://eureka-server:8761/eureka/"
+      Eureka__Client__ShouldRegisterWithEureka: "true"
+      Eureka__Client__ShouldFetchRegistry: "false"
+      Eureka__Instance__AppName: "LEAVE-SERVICE"
+      Eureka__Instance__HostName: "leave-service"
+      Eureka__Instance__Port: "8080"
+      Eureka__Instance__HealthCheckUrlPath: "/health"
+      Jaeger__ServiceName: "LeaveService"
+      Jaeger__Host: "jaeger"
+      Jaeger__Port: "4317"
+      Jaeger__SamplingRate: "1.0"
+      # === OpenTelemetry Settings ===
+      OTEL_SERVICE_NAME: LeaveService
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+    ports:
+      - "5003:8080"
+    depends_on:
+      eureka-server:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      leave-db:
+        condition: service_started
+    networks:
+      - lms-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: src/Services/NotificationService/Dockerfile
+    container_name: lms-notification-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Host=notification-db;Port=5432;Database=NotificationDb;Username=postgres;Password=postgres"
+      JwtSettings__SecretKey: "LeaveManagementSystem_SuperSecretKey_2026_JWT_Min256Bits!!"
+      JwtSettings__Issuer: "LeaveManagementSystem"
+      JwtSettings__Audience: "LeaveManagementSystemClients"
+      JwtSettings__ExpirationMinutes: "60"
+      RabbitMQ__HostName: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__UserName: "guest"
+      RabbitMQ__Password: "guest"
+      Eureka__Client__ServiceUrl: "http://eureka-server:8761/eureka/"
+      Eureka__Client__ShouldRegisterWithEureka: "true"
+      Eureka__Client__ShouldFetchRegistry: "false"
+      Eureka__Instance__AppName: "NOTIFICATION-SERVICE"
+      Eureka__Instance__HostName: "notification-service"
+      Eureka__Instance__Port: "8080"
+      Eureka__Instance__HealthCheckUrlPath: "/health"
+      Jaeger__ServiceName: "NotificationService"
+      Jaeger__Host: "jaeger"
+      Jaeger__Port: "4317"
+      Jaeger__SamplingRate: "1.0"
+      # ... other settings
+      OTEL_SERVICE_NAME: NotificationService
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+    ports:
+      - "5004:8080"
+    depends_on:
+      eureka-server:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      notification-db:
+        condition: service_started
+    networks:
+      - lms-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    container_name: lms-api-gateway
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+      UseEureka: "true"
+      Eureka__Client__ServiceUrl: "http://eureka-server:8761/eureka/"
+      Eureka__Client__ShouldRegisterWithEureka: "false"
+      Eureka__Client__ShouldFetchRegistry: "true"
+      Eureka__Instance__AppName: "API-GATEWAY"
+      Eureka__Instance__HostName: "api-gateway"
+      Eureka__Instance__Port: "8080"
+      Jaeger__ServiceName: "ApiGateway"
+      Jaeger__Host: "jaeger"
+      Jaeger__Port: "4317"
+      Jaeger__SamplingRate: "1.0"
+      # === OpenTelemetry Settings ===
+      OTEL_SERVICE_NAME: ApiGateway
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+    ports:
+      - "5000:8080"
+    depends_on:
+      eureka-server:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      employee-service:
+        condition: service_started
+      leave-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    driver: bridge
+
+volumes:
+  identity-data:
+  employee-data:
+  leave-data:
+  notification-data:
