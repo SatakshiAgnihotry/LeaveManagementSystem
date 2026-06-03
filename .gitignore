@@ -1,0 +1,32 @@
+# Build outputs
+bin/
+obj/
+
+# Logs
+*.log
+
+# VS files
+.vs/
+.vscode/
+
+# Docker
+*.dockerignore
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+
+# Configs generated locally
+secrets.json
+
+# Postman collections (optional)
+postman/*.json
+
+# Database files
+*.mdf
+*.ldf
+
+# OS files
+Thumbs.db
+.DS_Store
