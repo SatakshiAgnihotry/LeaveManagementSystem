@@ -2,6 +2,9 @@
 
 Welcome to the Leave Management System microservices project! This is a comprehensive, production-ready microservices architecture built with .NET 8.0, featuring authentication, employee management, leave processing, and notifications.
 
+# Video Recording Link:
+https://nagarro-my.sharepoint.com/:v:/r/personal/satakshi_agnihotri_nagarro_com/Documents/Recordings/Meeting%20with%20Satakshi%20Agnihotri-20260604_130419-Meeting%20Recording.mp4?csf=1&web=1&e=P3ad16&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D
+
 ## 📋 Table of Contents
 
 - [Project Overview](#project-overview)
