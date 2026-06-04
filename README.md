@@ -133,7 +133,7 @@ dotnet --version
 
 ```bash
 # Clone the LMS repository
-git clone https://github.com/your-org/lms-microservices.git
+git clone https://github.com/SatakshiAgnihotry/LeaveManagementSystem.git
 
 # Navigate to project directory
 cd LMS
